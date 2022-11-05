@@ -11,6 +11,15 @@ class TSPDReader(object):
         self.__droneMatrix = []
         self.__nodes = []
 
+    def getTruckMatrix(self):
+        return self.__truckMatrix
+
+    def getDroneMatrix(self):
+        return self.__droneMatrix
+
+    def getNodes(self):
+        return self.__nodes
+
     def read(self):
         folders = os.listdir(TSPDReader.directory)
         for folder in folders: # Percorre os diretórios da pasta raiz
@@ -32,7 +41,7 @@ class TSPDReader(object):
         lines = file.readlines()
         for line in lines:
             line = stringToIntArray(line)
-            self.__nodes.append([line[1].strip(), line[2].strip(),line[3].strip()])
+            self.__nodes.append([line[0].strip(), line[1].strip(), line[2].strip(), line[3].strip()])
 
     def readTau(self,fullPath,type):
         file = open(fullPath, 'r')
