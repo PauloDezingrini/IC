@@ -4,7 +4,7 @@ from numpy import linspace
 
 class TSPDReader(object):
 
-    directory = 'tsplib_generated_instances' # Atribuo estático
+    directory = './tsplib_generated_instances' # Atributo estático
 
     def __init__(self):
         self.__truckMatrix = []
@@ -20,21 +20,20 @@ class TSPDReader(object):
     def getNodes(self):
         return self.__nodes
 
-    def read(self):
-        folders = os.listdir(TSPDReader.directory)
-        for folder in folders: # Percorre os diretórios da pasta raiz
-            subFolder = TSPDReader.directory + '\\' + folder
-            for filename in os.listdir(subFolder): # Percorre os arquivos dentro do sub-diretório
-                if(folder + '.tsp' == filename): # Evitar a leitura do tsp
-                    continue
-                fullPath = os.path.join(subFolder, filename) 
-                if filename == 'nodes.csv':
-                    self.readNodes(fullPath)
-                elif filename == 'tau.csv':
-                    self.readTau(fullPath,'truck')
-                    return
-                elif filename == 'tauprime.csv':
-                    self.readTau(fullPath,'drone')
+    def read(self,folder):
+        subFolder = TSPDReader.directory + '\\' + folder
+        # print(subFolder)
+        for filename in os.listdir(subFolder): # Percorre os arquivos dentro do sub-diretório
+            if(folder + '.tsp' == filename): # Evitar a leitura do tsp
+                continue
+            fullPath = os.path.join(subFolder, filename) 
+            if filename == 'nodes.csv':
+                self.readNodes(fullPath)
+            elif filename == 'tau.csv':
+                self.readTau(fullPath,'truck')
+                return
+            elif filename == 'tauprime.csv':
+                self.readTau(fullPath,'drone')
 
     def readNodes(self,fullPath):
         file = open(fullPath, 'r')
