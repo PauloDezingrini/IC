@@ -2,12 +2,16 @@ import heapq
 from random import randint
 
 class Solver(object):
-    def __init__(self, truckMatrix, droneMatrix, nodes):
+    def __init__(self, truckMatrix, droneMatrix, nodes, st, sr, endurance):
         self.__truckMatrix = truckMatrix
         self.__droneMatrix = droneMatrix
         self.__nodes = nodes
-        self.__solution = []
         self.__time = 0
+        self.__st = st
+        self.__sr = sr
+        self.__endurance = endurance
+        self.__solution = []
+        self.__droneDeliveries = []
 
     # Funções auxiliares
     def printSolution(self):
@@ -18,6 +22,8 @@ class Solver(object):
     def getTime(self, _from, _to):
         return float(self.__truckMatrix[self.__solution[_from]][self.__solution[_to]])
 
+    def getDroneTime(self, i, j, k):
+        return float(self.__droneMatrix[self.__solution[i]][self.__solution[j]]) + float(self.__droneMatrix[self.__solution[j]][self.__solution[k]]) 
 
     def calcDist(self):
         self.__time = 0;
@@ -57,7 +63,7 @@ class Solver(object):
             self.__time += float(closest[index][0]) # Acrescenta a distância
             count += 1
         lastInsert = self.__solution[-1]
-        self.__solution.append(0) # Adiciona o depósito, para fechar o ciclo
+        self.__solution.append(len(self.__nodes) - 1) # Adiciona o depósito, para fechar o ciclo
         self.__time += float(self.__truckMatrix[lastInsert][0])
         self.__time = round(self.__time,2)
         # print(self.__time)
@@ -145,43 +151,129 @@ class Solver(object):
             else:
                 k+=1
 
+    def getDroneDeliveries(self):
+        droneDeliveries = []
+        for droneNode in self.__nodes:
+            # print("GET OVER HERE")
+            if droneNode[3] == 1:
+                for departureNode in self.__nodes:
+                    if departureNode == self.__nodes[-1]:
+                        break
+                    for arriveNode in self.__nodes:
+                        departureIndex = self.__solution.index(departureNode[0])
+                        arriveIndex = self.__solution.index(arriveNode[0])
+                        if departureNode != droneNode and arriveNode != droneNode and departureIndex < arriveIndex:
+                            # print(f"Departure: {departureNode} | Arrival: {arriveNode} | Drone: {droneNode}")
+                            # print(len(self.__droneMatrix))
+                            timeSpend = float(self.__droneMatrix[departureNode[0]][droneNode[0]]) + float(self.__droneMatrix[droneNode[0]][arriveNode[0]]) + self.__sr + self.__st
+                            if timeSpend <= self.__endurance:
+                                droneDeliveries.append((departureNode[0], droneNode[0], arriveNode[0]))
+        self.__droneDeliveries = droneDeliveries
+
 
     def split1(self):
+        self.getDroneDeliveries()
+
         arcs = []
         T = []
+        # print(self.__solution)
         for i in range(len(self.__solution) - 1):
             arcs.append((self.__solution[i], self.__solution[i+1], self.getTime(i,i+1)))
 
-        for i in range(len(self.__solution) - 2):
-            for j in range(len(self.__solution) - 1):
-                if(j >= i + 2):
-                    minValue = -1
-                    miIndex = -1
-                    for k in range(len(self.__solution)):
-                        if(i < k and k < j):
-                            if(True):# ?
-                                # cost ?
-                                if(cost < minValue):
-                                    minValue = cost;
-                                    minIndex = k
-                    arcs.append((self.__solution[i], self.__solution[j], minValue))
-                    if minIndex not in T:
-                        T.append((self.__solution[i],self.__solution[minIndex], self.__solution[j], minValue))
+        # print(arcs)
 
+
+        for i in range(len(self.__solution) - 2):
+            for k in range(len(self.__solution) - 1):
+                if(k >= i + 2):
+                    minValue = -1
+                    minIndex = -1
+                    for j in range(len(self.__solution)):
+                        if(i < j and j < k):
+                            if (i,j,k) in self.__droneDeliveries:
+                                time = max(self.getTime(i,k), self.getDroneTime(i,j,k)) + self.__sr + self.__st 
+                                if minValue == -1 or time < minValue:
+                                    minValue = time
+                                    minIndex = j
+                    if minValue != -1  and minIndex != - 1:
+                        arcs.append((self.__solution[i],self.__solution[k],minValue))
+                        minDroneDelivery = (self.__solution[i], self.__solution[minIndex], self.__solution[k], minValue)
+                        if minDroneDelivery not in T:
+                            T.append(minDroneDelivery)
+        # print(T)
         V = []
         P = []  
-        # Como inicializar / O que é V
-        V = [-1 for i in range(len(self.__solution) - 1)]
-        P = [-1 for i in range(len(self.__solution) - 1)] 
+        V = [2147483647 for i in range(len(self.__solution) )]
+        P = [2147483647 for i in range(len(self.__solution) )] 
         V[0] = 0
         P[0] = 0
-        for i in self.__solution[0]:
-            if(i != 0):
+        for i in self.__solution:
+            if i != 0:  # 
                 for arc in arcs:
-                    if(V[arc[1]] == -1 or V[arc[1]] > V[arc[0]] + arc[2]):
-                        V[arc[1]] = V[arc[0]] + arc[2]
-                        P[arc[1]] = i
+                    if arc[1] == i: #
+                        if V[i] > V[arc[0]] + arc[2]:
+                            V[arc[1]] =  V[arc[0]] + arc[2]
+                            P[arc[1]] = arc[0]
+        
+        return P, V, T
 
+    def getDroneNode(self, T , launch, recover):
+        for droneDelivery in T:
+            if droneDelivery[0] == launch and droneDelivery[2] == recover:
+                return droneDelivery[1]
+    
+    def isLaunchNode(self, currentNode, droneSolution):
+        for droneDelivery in droneSolution:
+            if droneDelivery[0] == currentNode:
+                return (True, droneDelivery)
+        return (False, 0)
+
+    def split2(self):
+        P, V , T =  self.split1()
+        j = self.__solution[-1]
+        i = 2147483647
+        s = []
+        s.append(j)
+        # print(P)
+        while i != 0:
+            i = P[j]
+            # print(i)
+            s.append(i)
+            j = i
+
+        s.reverse()
+        # print(self.__solution)
+        # print(s)
+        # print(T)
+        droneSolution = []
+        truckSolution = []
+
+        for i in range(len(s) - 1):
+            iIndex = self.__solution.index(s[i])
+            i1Index = self.__solution.index(s[i + 1])
+            if iIndex + 1 != i1Index:
+                droneNode = self.getDroneNode(T, s[i], s[i + 1])
+                droneSolution.append((s[i], droneNode, s[i + 1]))
+
+        currentNode = 0
+        while currentNode != self.__solution[-1]:
+            print(currentNode)
+            aux = self.isLaunchNode(currentNode, droneSolution)
+            if aux[0]:
+                launchIndex = self.__solution.index(aux[1][0])
+                recoverIndex = self.__solution.index(aux[1][2])
+                for i in range(launchIndex,recoverIndex + 1):
+                    if(self.__solution[i] != aux[1][1]):
+                        truckSolution.append(self.__solution[i])
+                currentNode = aux[1][2]
+            else:
+                truckSolution.append(currentNode)
+                currentNode = self.__solution[self.__solution.index(currentNode) + 1]
+
+        print(truckSolution)
+        print(droneSolution)
+        print(self.__solution)
+        print(f'Truck Nodes: {len(truckSolution)} | Drone Nodes: {len(droneSolution)} | TSP Solution: {len(self.__solution)}')
 
 
 def randomizeLocalSearchs():

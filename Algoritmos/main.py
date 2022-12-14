@@ -10,15 +10,16 @@ for folder in folders: # Percorre os diretórios da pasta raiz
 
     reader.read(folder)
 
-    solver = Solver(reader.getTruckMatrix(), reader.getDroneMatrix(), reader.getNodes())
+    solver = Solver(reader.getTruckMatrix(), reader.getDroneMatrix(), reader.getNodes(), 1, 1, 100)
 
     solver.HVMP(1)
 
-    solver.printSolution()
+    # solver.printSolution()
     # solver.localSearchSwap()
     # solver.localSearchInsertion()
     # solver.localSearch2OPT()
-    solver.RVND()
-    solver.printSolution()
+    # solver.RVND()
+    solver.split2()
+    # solver.printSolution()
 
     break

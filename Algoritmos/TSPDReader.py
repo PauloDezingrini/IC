@@ -10,6 +10,7 @@ class TSPDReader(object):
         self.__truckMatrix = []
         self.__droneMatrix = []
         self.__nodes = []
+        self.__droneDeliveries = []
 
     def getTruckMatrix(self):
         return self.__truckMatrix
@@ -19,6 +20,9 @@ class TSPDReader(object):
 
     def getNodes(self):
         return self.__nodes
+
+    def getDroneDeliveries(self):
+        return self.__droneDeliveries
 
     def read(self,folder):
         subFolder = TSPDReader.directory + '\\' + folder
@@ -31,7 +35,6 @@ class TSPDReader(object):
                 self.readNodes(fullPath)
             elif filename == 'tau.csv':
                 self.readTau(fullPath,'truck')
-                return
             elif filename == 'tauprime.csv':
                 self.readTau(fullPath,'drone')
 
@@ -40,7 +43,7 @@ class TSPDReader(object):
         lines = file.readlines()
         for line in lines:
             line = stringToIntArray(line)
-            self.__nodes.append([line[0].strip(), line[1].strip(), line[2].strip(), line[3].strip()])
+            self.__nodes.append([int(line[0].strip()), int(line[1].strip()), int(line[2].strip()), int(line[3].strip())])
 
     def readTau(self,fullPath,type):
         file = open(fullPath, 'r')
