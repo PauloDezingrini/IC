@@ -12,12 +12,18 @@ class Solver(object):
         self.__endurance = endurance
         self.__solution = []
         self.__droneDeliveries = []
+        self.__droneSolution = []
+        self.__truckSolution = []
+        self.__representation = []
 
     # Funções auxiliares
     def printSolution(self):
         print("Time: ", self.__time)
         print(len(self.__solution))
         print(self.__solution)
+
+    def getTotalTime(self):
+        return self.__time
 
     def getTime(self, _from, _to):
         return float(self.__truckMatrix[self.__solution[_from]][self.__solution[_to]])
@@ -30,6 +36,27 @@ class Solver(object):
         for i in range(len(self.__solution) - 1):
             # print(self.__solution[i], " - ", self.__solution[i+1], " | ",self.__truckMatrix[self.__solution[i]][self.__solution[i + 1]]);
             self.__time += float(self.__truckMatrix[self.__solution[i]][self.__solution[i + 1]])
+
+    def calculateTime(self):
+        time = 0
+        truckTime = 0
+        droneAvailable = True
+        for i in range(1, len(self.__solution)):
+            if self.__representation[i] == 1 and droneAvailable:
+                droneAvailable = False
+                droneDelivery = self.__solution[i]
+                droneLaunch = self.__solution[i - 1]
+                time += float(self.__truckMatrix[i - 1][i]) if (truckTime == 0)  else truckTime
+                truckTime = 0
+            else:
+                truckTime += float(self.__truckMatrix[self.__solution[i - 1]][self.__solution[i]]) 
+            if self.__representation[i] == 0 and ~droneAvailable:
+                droneRecover = self.__solution[i]
+                droneAvailable = True
+                droneTime = float(self.__droneMatrix[droneLaunch][droneDelivery]) + float(self.__droneMatrix[droneDelivery][droneRecover]) + self.__st + self.__sr
+                time += max(droneTime, truckTime)
+                truckTime = 0
+        self.__time = time
 
     def closestPoints(self, num_points):
         pq = []
@@ -66,6 +93,8 @@ class Solver(object):
         self.__solution.append(len(self.__nodes) - 1) # Adiciona o depósito, para fechar o ciclo
         self.__time += float(self.__truckMatrix[lastInsert][0])
         self.__time = round(self.__time,2)
+        print(len(self.__solution))
+        print(self.__solution)
         # print(self.__time)
         # self.calcDist()
         # print(self.__time)
@@ -76,8 +105,8 @@ class Solver(object):
             better = False
             lessTime = self.__time
             lessSol = self.__solution.copy()
-            for i in range(1,len(self.__solution) - 1):
-                for j in range(i + 1, len(self.__solution) - 1):
+            for i in range(1,len(self.__solution) - 2):
+                for j in range(i + 1, len(self.__solution) - 2):
                     self.__solution[i], self.__solution[j] = self.__solution[j] , self.__solution[i]
                     self.calcDist()
                     if(self.__time < lessTime):
@@ -154,7 +183,6 @@ class Solver(object):
     def getDroneDeliveries(self):
         droneDeliveries = []
         for droneNode in self.__nodes:
-            # print("GET OVER HERE")
             if droneNode[3] == 1:
                 for departureNode in self.__nodes:
                     if departureNode == self.__nodes[-1]:
@@ -262,19 +290,36 @@ class Solver(object):
             if aux[0]:
                 launchIndex = self.__solution.index(aux[1][0])
                 recoverIndex = self.__solution.index(aux[1][2])
-                for i in range(launchIndex,recoverIndex + 1):
+                for i in range(launchIndex,recoverIndex):
                     if(self.__solution[i] != aux[1][1]):
                         truckSolution.append(self.__solution[i])
                 currentNode = aux[1][2]
             else:
                 truckSolution.append(currentNode)
                 currentNode = self.__solution[self.__solution.index(currentNode) + 1]
+        truckSolution.append(currentNode)
+        
 
         print(truckSolution)
         print(droneSolution)
-        print(self.__solution)
+        self.__truckSolution = truckSolution
+        self.__droneSolution = droneSolution
         print(f'Truck Nodes: {len(truckSolution)} | Drone Nodes: {len(droneSolution)} | TSP Solution: {len(self.__solution)}')
 
+    def createRepresentation(self):
+        representation = [0 for i in range(len(self.__solution) )] 
+        for delivery in self.__droneSolution:
+            tspDroneLaunchIndex = self.__solution.index(delivery[0])
+            tspDroneDeliveredIndex = self.__solution.index(delivery[1])
+            tspDroneRecoverIndex = self.__solution.index(delivery[2])
+            self.__solution.pop(tspDroneDeliveredIndex)
+            tspDroneLaunchIndex += 1 
+            self.__solution.insert(tspDroneLaunchIndex, delivery[1])
+            while(tspDroneLaunchIndex != tspDroneRecoverIndex):
+                representation[tspDroneLaunchIndex] = 1
+                tspDroneLaunchIndex += 1
+        self.__representation = representation
+    
 
 def randomizeLocalSearchs():
     localSearchs = []
