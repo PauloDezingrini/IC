@@ -22,6 +22,19 @@ class Solver(object):
         print(len(self.__solution))
         print(self.__solution)
 
+    def reinit(self, solution):
+        self.__time = 0
+        self.__solution = solution
+        self.__droneSolution = []
+        self.__truckSolution = []
+        self.__representation = []
+
+    def getSolution(self):
+        return self.__solution
+    
+    def setSolution(self, solution):
+        self.__solution = solution
+
     def getTotalTime(self):
         return self.__time
 
@@ -37,12 +50,30 @@ class Solver(object):
             # print(self.__solution[i], " - ", self.__solution[i+1], " | ",self.__truckMatrix[self.__solution[i]][self.__solution[i + 1]]);
             self.__time += float(self.__truckMatrix[self.__solution[i]][self.__solution[i + 1]])
 
+    def createRepresentation(self):
+        representation = [0 for i in range(len(self.__solution) )] 
+        for delivery in self.__droneSolution:
+            tspDroneLaunchIndex = self.__solution.index(delivery[0])
+            tspDroneDeliveredIndex = self.__solution.index(delivery[1])
+            tspDroneRecoverIndex = self.__solution.index(delivery[2])
+            self.__solution.pop(tspDroneDeliveredIndex)
+            tspDroneLaunchIndex += 1 
+            self.__solution.insert(tspDroneLaunchIndex, delivery[1])
+            while(tspDroneLaunchIndex != tspDroneRecoverIndex):
+                representation[tspDroneLaunchIndex] = 1
+                tspDroneLaunchIndex += 1
+        self.__representation = representation
+
     def calculateTime(self):
         time = 0
         truckTime = 0
         droneAvailable = True
+        droneDelivery = -1
+        droneLaunch = -1
         for i in range(1, len(self.__solution)):
             if self.__representation[i] == 1 and droneAvailable:
+                if self.__nodes[self.__solution[i]][3] == 0:
+                    return False
                 droneAvailable = False
                 droneDelivery = self.__solution[i]
                 droneLaunch = self.__solution[i - 1]
@@ -51,12 +82,15 @@ class Solver(object):
             else:
                 truckTime += float(self.__truckMatrix[self.__solution[i - 1]][self.__solution[i]]) 
             if self.__representation[i] == 0 and ~droneAvailable:
+                if droneLaunch == -1 and droneDelivery != -1:
+                    print("Please stop")
                 droneRecover = self.__solution[i]
                 droneAvailable = True
                 droneTime = float(self.__droneMatrix[droneLaunch][droneDelivery]) + float(self.__droneMatrix[droneDelivery][droneRecover]) + self.__st + self.__sr
                 time += max(droneTime, truckTime)
                 truckTime = 0
-        self.__time = time
+        return time
+
 
     def closestPoints(self, num_points):
         pq = []
@@ -93,8 +127,9 @@ class Solver(object):
         self.__solution.append(len(self.__nodes) - 1) # Adiciona o depósito, para fechar o ciclo
         self.__time += float(self.__truckMatrix[lastInsert][0])
         self.__time = round(self.__time,2)
-        print(len(self.__solution))
-        print(self.__solution)
+        return self.__time
+        # print(len(self.__solution))
+        # print(self.__solution)
         # print(self.__time)
         # self.calcDist()
         # print(self.__time)
@@ -118,6 +153,7 @@ class Solver(object):
                         self.calcDist()
             self.__time = lessTime
             self.__solution = lessSol
+        return self.__time
 
     def localSearchInsertion(self):
         better = True
@@ -139,6 +175,7 @@ class Solver(object):
                     self.__solution = sol
             self.__time = lessTime
             self.__solution = lessSol
+        return self.__time
 
     def localSearch2OPT(self):
         better = True
@@ -161,6 +198,7 @@ class Solver(object):
                         break
             self.__time = lessTime
             self.__solution = lessSol
+        return self.__time
 
     def RVND(self):
         localSearchs = randomizeLocalSearchs()
@@ -179,9 +217,259 @@ class Solver(object):
                 localSearchs = randomizeLocalSearchs()
             else:
                 k+=1
+        return self.__time
+
+
+    # DLS = Drone Local Search
+    def DLSSwap(self):
+        better = True
+        while(better):
+            better = False
+            bestTime = self.__time
+            bestSolution = self.__solution.copy()
+            for i in range(1,len(self.__solution) - 1):
+                for j in range(1,len(self.__solution) - 1):
+                    self.__solution[i], self.__solution[j] = self.__solution[j], self.__solution[i]
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestSolution = self.__solution.copy()
+                    self.__solution[j], self.__solution[i] = self.__solution[i], self.__solution[j]
+            self.__solution = bestSolution
+            self.__time = bestTime
+        return self.__time
+
+
+    def DLSFullSwap(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.__time
+            bestSolution = self.__solution.copy()
+            bestRepresentation = self.__representation.copy()
+            for i in range(1,len(self.__solution) - 1):
+                for j in range(1,len(self.__solution) - 1):
+                    self.__solution[i], self.__solution[j] = self.__solution[j], self.__solution[i]
+                    self.__representation[i], self.__representation[j] = self.__representation[j], self.__representation[i]
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True   
+                        bestTime = time
+                        bestSolution = self.__solution.copy()
+                        bestRepresentation = self.__representation.copy()
+                    self.__solution[j], self.__solution[i] = self.__solution[i], self.__solution[j]
+                    self.__representation[j], self.__representation[i] = self.__representation[i], self.__representation[j]
+            self.__solution = bestSolution
+            self.__representation = bestRepresentation
+            self.__time = bestTime
+        return self.__time
+
+
+    def DLSInsertion(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.__time
+            bestSol = self.__solution.copy()
+            for i in range(1, len(self.__solution) - 1):
+                for j in range(1, len(self.__solution) - 1):
+                    sol = self.__solution.copy()
+                    valueToInsert = self.__solution[i]
+                    self.__solution.pop(i)
+                    self.__solution.insert(j, valueToInsert)
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestSol = self.__solution.copy()
+                    self.__solution = sol
+            self.__time = bestTime
+            self.__solution = bestSol
+        return self.__time
+
+
+    def DLSFullInsertion(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.__time
+            bestSol = self.__solution.copy()
+            bestRepresentation = self.__representation.copy()
+            for i in range(1, len(self.__solution) - 1):
+                for j in range(1, len(self.__solution) - 1):
+                    sol = self.__solution.copy()
+                    representation = self.__representation.copy()
+                    valueToInsert = self.__solution[i]
+                    repToInsert = self.__representation[i]
+                    self.__solution.pop(i)
+                    self.__representation.pop(i)
+                    self.__solution.insert(j, valueToInsert)
+                    self.__representation.insert(j, repToInsert)
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestSol = self.__solution.copy()
+                        bestRepresentation = self.__representation.copy()
+                    self.__solution = sol
+                    self.__representation = representation
+            self.__time = bestTime
+            self.__solution = bestSol
+            self.__representation = bestRepresentation
+        return self.__time
+        
+
+    def DLSOneRemove(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.__time
+            bestRepresentation = self.__representation.copy()
+            for i in range(1, len(self.__solution) - 1):
+                if self.__representation[i] == 1:
+                    self.__representation[i] = 0
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestRepresentation = self.__representation.copy()
+                    self.__representation[i] = 1
+            self.__time = bestTime
+            self.__representation = bestRepresentation
+        return self.__time
+
+
+    def DLSOneAdd(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.__time
+            bestRepresentation = self.__representation.copy()
+            for i in range(1, len(self.__solution) - 1):
+                if self.__representation[i] == 0:
+                    self.__representation[i] = 1
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestRepresentation = self.__representation.copy()
+                    self.__representation[i] = 0
+            self.__time = bestTime
+            self.__representation = bestRepresentation
+        return self.__time
+
+
+    def DLS2OPT(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.calculateTime()
+            bestSol = self.__solution.copy()
+            for i in range(1, len(self.__solution) - 1):
+                for j in range(i, len(self.__solution) - 1):
+                    self.__solution[i:j+1] = reversed(self.__solution[i:j+1])
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestSol = self.__solution.copy()
+                    self.__solution[i:j+1] = reversed(self.__solution[i:j+1])
+            self.__time = bestTime
+            self.__solution = bestSol  
+        return self.__time
+
+
+    def DLSFull2OPT(self):
+        better = True
+        while better:
+            better = False
+            bestTime = self.calculateTime()
+            bestSol = self.__solution.copy()
+            bestRepresentation = self.__representation.copy()
+            for i in range(1, len(self.__solution) - 1):
+                for j in range(i, len(self.__solution) - 1):
+                    self.__solution[i:j+1] = reversed(self.__solution[i:j+1])
+                    self.__representation[i:j+1] = reversed(self.__representation[i:j+1])
+                    time = self.calculateTime()
+                    if time != False and time < bestTime:
+                        better = True
+                        bestTime = time
+                        bestSol = self.__solution.copy()
+                        bestRepresentation = self.__representation.copy()
+                    self.__solution[i:j+1] = reversed(self.__solution[i:j+1])
+                    self.__representation[i:j+1] = reversed(self.__representation[i:j+1])
+            self.__time = bestTime
+            self.__solution = bestSol       
+            self.__representation = bestRepresentation 
+        return self.__time
+
+    def randomizeDLS(self):
+        DLS = []
+        while len(DLS) < 8:
+            index = randint(0, 7)
+            if index not in DLS:
+                DLS.append(index)
+        
+        return DLS
+
+    def droneRVND(self):
+        DLS = self.randomizeDLS()
+        k = 1
+        attempts = len(DLS)
+        while k <= attempts:
+            bestTime = self.__time
+            chosenDLS = DLS.pop()
+            print("CHAMANDO DLS: ", chosenDLS, " | VALOR: ", bestTime)
+            # print("SOL: ", self.__representation)
+            if chosenDLS == 0:
+                self.DLSSwap()
+            elif chosenDLS == 1:
+                self.DLSFullSwap()
+            elif chosenDLS == 2:
+                self.DLSInsertion()
+            elif chosenDLS == 3:
+                self.DLSFullInsertion()
+            elif chosenDLS == 4:
+                self.DLSOneRemove()
+            elif chosenDLS == 5:
+                self.DLSOneAdd()
+            elif chosenDLS == 6:
+                self.DLS2OPT()
+            elif chosenDLS == 7:
+                self.DLSFull2OPT()
+            if self.__time < bestTime:
+                k = 1
+                DLS = self.randomizeDLS()   
+            else:
+                k += 1 
+        return self.__time
+
+
+    def droneGrasp(self, repeat, m):
+        cont = 0
+        bestTime = -1
+        bestSol = []
+        bestRepresentation = []
+        while cont < repeat:
+            self.__solution = []
+            self.HVMP(m)
+            self.RVND()
+            self.split2()
+            self.createRepresentation()
+            self.droneRVND()
+            cont += 1
+            if self.__time < bestTime or bestTime == -1:
+                bestTime = self.__time
+                bestSol = self.__solution.copy()
+                bestRepresentation = self.__representation.copy()
+        self.__time = bestTime
+        self.__solution = bestSol
+        self.__representation = bestRepresentation
+        return self.__time
 
     def getDroneDeliveries(self):
-        droneDeliveries = []
+        droneDeliveries = []    
         for droneNode in self.__nodes:
             if droneNode[3] == 1:
                 for departureNode in self.__nodes:
@@ -198,9 +486,8 @@ class Solver(object):
                                 droneDeliveries.append((departureNode[0], droneNode[0], arriveNode[0]))
         self.__droneDeliveries = droneDeliveries
 
-
     def split1(self):
-        self.getDroneDeliveries()
+        # self.getDroneDeliveries()
 
         arcs = []
         T = []
@@ -285,7 +572,7 @@ class Solver(object):
 
         currentNode = 0
         while currentNode != self.__solution[-1]:
-            print(currentNode)
+            # print(currentNode)
             aux = self.isLaunchNode(currentNode, droneSolution)
             if aux[0]:
                 launchIndex = self.__solution.index(aux[1][0])
@@ -300,26 +587,14 @@ class Solver(object):
         truckSolution.append(currentNode)
         
 
-        print(truckSolution)
-        print(droneSolution)
+        # print(truckSolution)
+        # print(droneSolution)
         self.__truckSolution = truckSolution
         self.__droneSolution = droneSolution
-        print(f'Truck Nodes: {len(truckSolution)} | Drone Nodes: {len(droneSolution)} | TSP Solution: {len(self.__solution)}')
-
-    def createRepresentation(self):
-        representation = [0 for i in range(len(self.__solution) )] 
-        for delivery in self.__droneSolution:
-            tspDroneLaunchIndex = self.__solution.index(delivery[0])
-            tspDroneDeliveredIndex = self.__solution.index(delivery[1])
-            tspDroneRecoverIndex = self.__solution.index(delivery[2])
-            self.__solution.pop(tspDroneDeliveredIndex)
-            tspDroneLaunchIndex += 1 
-            self.__solution.insert(tspDroneLaunchIndex, delivery[1])
-            while(tspDroneLaunchIndex != tspDroneRecoverIndex):
-                representation[tspDroneLaunchIndex] = 1
-                tspDroneLaunchIndex += 1
-        self.__representation = representation
-    
+        self.createRepresentation()
+        self.__time = self.calculateTime()
+        return self.__time
+        # print(f'Truck Nodes: {len(truckSolution)} | Drone Nodes: {len(droneSolution)} | TSP Solution: {len(self.__solution)}')
 
 def randomizeLocalSearchs():
     localSearchs = []
@@ -329,3 +604,4 @@ def randomizeLocalSearchs():
         localSearchs.append(availableValues.pop(newInsert))
 
     return localSearchs
+

@@ -6,7 +6,7 @@ import os
 import time
 
 
-sheetName = input("Digite o nome do arquivo com os resultados")
+sheetName = input("Digite o nome do arquivo com os resultados: ")
 firstLine = ("Instância", "Tempo", "Tempo de execução")
 sheet = Workbook()
 sheet1 = sheet.active
@@ -23,7 +23,9 @@ for folder in folders: # Percorre os diretórios da pasta raiz
     solver = Solver(reader.getTruckMatrix(), reader.getDroneMatrix(), reader.getNodes(), 1, 1, 20)
 
     startTime = time.time()
-    time = solver.HVMP(1)
+    solver.getDroneDeliveries()
+    result = solver.droneGrasp(100,4)
     endTime = time.time()
 
-    break
+    sheet1.append((folder, result, endTime - startTime))
+    sheet.save(sheetName + '.xlsx')

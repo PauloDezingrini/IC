@@ -43,7 +43,7 @@ class TSPDReader(object):
         lines = file.readlines()
         for line in lines:
             line = stringToIntArray(line)
-            self.__nodes.append([int(line[0].strip()), int(line[1].strip()), int(line[2].strip()), int(line[3].strip())])
+            self.__nodes.append([float(line[0].strip()), float(line[1].strip()), float(line[2].strip()), float(line[3].strip())])
 
     def readTau(self,fullPath,type):
         file = open(fullPath, 'r')
