@@ -64,6 +64,8 @@ class Solver(object):
                 tspDroneLaunchIndex += 1
         self.__representation = representation
 
+
+
     def calculateTime(self):
         time = 0
         truckTime = 0
@@ -77,7 +79,7 @@ class Solver(object):
                 droneAvailable = False
                 droneDelivery = self.__solution[i]
                 droneLaunch = self.__solution[i - 1]
-                time += float(self.__truckMatrix[i - 1][i]) if (truckTime == 0)  else truckTime
+                time += float(self.__truckMatrix[self.__solution[i - 1]][self.__solution[i]]) if (truckTime == 0)  else truckTime
                 truckTime = 0
             else:
                 truckTime += float(self.__truckMatrix[self.__solution[i - 1]][self.__solution[i]]) 
@@ -112,7 +114,7 @@ class Solver(object):
 
     # Heurísitca do vizinho mais próximo com escolhas aleatórias. Utilizar m = 1 para a versão tradicional.
     def HVMP(self, m):
-        self.__solution.append(0) # Adiciona o depósito a solução.
+        self.__solution.append(self.__nodes[0][0]) # Adiciona o depósito a solução.
         count = 1
         while(count < len(self.__nodes) - 1):
             closest = self.closestPoints(m); # Recupera os m pontos mais próximos
@@ -124,7 +126,7 @@ class Solver(object):
             self.__time += float(closest[index][0]) # Acrescenta a distância
             count += 1
         lastInsert = self.__solution[-1]
-        self.__solution.append(len(self.__nodes) - 1) # Adiciona o depósito, para fechar o ciclo
+        self.__solution.append(self.__nodes[-1][0]) # Adiciona o depósito, para fechar o ciclo
         self.__time += float(self.__truckMatrix[lastInsert][0])
         self.__time = round(self.__time,2)
         return self.__time
@@ -604,4 +606,3 @@ def randomizeLocalSearchs():
         localSearchs.append(availableValues.pop(newInsert))
 
     return localSearchs
-
