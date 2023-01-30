@@ -48,6 +48,7 @@ class Solver(object):
         self.__time = 0;
         for i in range(len(self.__solution) - 1):
             # print(self.__solution[i], " - ", self.__solution[i+1], " | ",self.__truckMatrix[self.__solution[i]][self.__solution[i + 1]]);
+            print(len(self.__nodes), " - ", i)
             self.__time += float(self.__truckMatrix[self.__solution[i]][self.__solution[i + 1]])
 
     def createRepresentation(self):
@@ -63,8 +64,6 @@ class Solver(object):
                 representation[tspDroneLaunchIndex] = 1
                 tspDroneLaunchIndex += 1
         self.__representation = representation
-
-
 
     def calculateTime(self):
         time = 0
@@ -114,7 +113,7 @@ class Solver(object):
 
     # Heurísitca do vizinho mais próximo com escolhas aleatórias. Utilizar m = 1 para a versão tradicional.
     def HVMP(self, m):
-        self.__solution.append(self.__nodes[0][0]) # Adiciona o depósito a solução.
+        self.__solution.append(int(self.__nodes[0][0])) # Adiciona o depósito a solução.
         count = 1
         while(count < len(self.__nodes) - 1):
             closest = self.closestPoints(m); # Recupera os m pontos mais próximos
@@ -126,7 +125,8 @@ class Solver(object):
             self.__time += float(closest[index][0]) # Acrescenta a distância
             count += 1
         lastInsert = self.__solution[-1]
-        self.__solution.append(self.__nodes[-1][0]) # Adiciona o depósito, para fechar o ciclo
+        self.__solution.append(int(self.__nodes[-1][0])) # Adiciona o depósito, para fechar o ciclo
+        # print(self.__solution)
         self.__time += float(self.__truckMatrix[lastInsert][0])
         self.__time = round(self.__time,2)
         return self.__time
@@ -471,7 +471,7 @@ class Solver(object):
         return self.__time
 
     def getDroneDeliveries(self):
-        droneDeliveries = []    
+        droneDeliveries = []  
         for droneNode in self.__nodes:
             if droneNode[3] == 1:
                 for departureNode in self.__nodes:
@@ -480,6 +480,8 @@ class Solver(object):
                     for arriveNode in self.__nodes:
                         departureIndex = self.__solution.index(departureNode[0])
                         arriveIndex = self.__solution.index(arriveNode[0])
+                        if self.__solution[0] == 0 and arriveNode == len(self.__nodes) - 1 or self.__solution[0] == 1 and arriveNode == len(self.__nodes): 
+                            arriveIndex = self.__solution.index(self.__solution[0])
                         if departureNode != droneNode and arriveNode != droneNode and departureIndex < arriveIndex:
                             # print(f"Departure: {departureNode} | Arrival: {arriveNode} | Drone: {droneNode}")
                             # print(len(self.__droneMatrix))

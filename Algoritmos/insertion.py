@@ -24,7 +24,7 @@ for folder in folders: # Percorre os diretórios da pasta raiz
 
     startTime = time.time()
     solver.HVMP(1)
-    solver.RVND()
+    # solver.RVND()
     solver.getDroneDeliveries()
     solver.split2()
     result = solver.DLSInsertion()
