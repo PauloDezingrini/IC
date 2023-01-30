@@ -25,6 +25,7 @@ for folder in folders: # Percorre os diretórios da pasta raiz
     startTime = time.time()
     solver.HVMP(1)
     # solver.RVND()
+    # solver.printSolution()
     solver.getDroneDeliveries()
     solver.split2()
     result = solver.DLSSwap()
@@ -32,3 +33,5 @@ for folder in folders: # Percorre os diretórios da pasta raiz
 
     sheet1.append((folder, result, endTime - startTime))
     sheet.save(sheetName + '.xlsx')
+
+

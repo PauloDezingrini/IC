@@ -41,9 +41,19 @@ class TSPDReader(object):
     def readNodes(self,fullPath):
         file = open(fullPath, 'r')
         lines = file.readlines()
+        normalize = False
         for line in lines:
             line = stringToIntArray(line)
-            self.__nodes.append([int(line[0].strip()), float(line[1].strip()), float(line[2].strip()), int(line[3].strip())])
+            if(self.__nodes == []):
+                firstId = int(line[0].strip())
+                if(firstId == 1):
+                    normalize = True
+                    self.__nodes.append([firstId - 1, float(line[1].strip()), float(line[2].strip()), int(line[3].strip())])
+            elif(normalize):
+                self.__nodes.append([int(line[0].strip()) - 1, float(line[1].strip()), float(line[2].strip()), int(line[3].strip())])
+            else:
+                self.__nodes.append([int(line[0].strip()), float(line[1].strip()), float(line[2].strip()), int(line[3].strip())])
+
 
     def readTau(self,fullPath,type):
         file = open(fullPath, 'r')

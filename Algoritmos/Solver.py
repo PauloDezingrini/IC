@@ -21,6 +21,7 @@ class Solver(object):
         print("Time: ", self.__time)
         print(len(self.__solution))
         print(self.__solution)
+        print(self.__nodes)
 
     def reinit(self, solution):
         self.__time = 0
@@ -98,8 +99,8 @@ class Solver(object):
         lastInsert = self.__solution[-1]
         size = len(self.__nodes) - 1
         for j in range(size):
-            if j not in self.__solution and j != lastInsert:
-                heapq.heappush(pq, (self.__truckMatrix[lastInsert][j], j))
+            if self.__nodes[j][0] not in self.__solution and j != lastInsert:
+                heapq.heappush(pq, (self.__truckMatrix[lastInsert][j], self.__nodes[j][0]))
         closest = heapq.nsmallest(num_points, pq)
         return closest
 
@@ -124,9 +125,9 @@ class Solver(object):
             self.__solution.append(closest[index][1]) # Adiciona na solução
             self.__time += float(closest[index][0]) # Acrescenta a distância
             count += 1
+        print(self.__solution)
         lastInsert = self.__solution[-1]
         self.__solution.append(int(self.__nodes[-1][0])) # Adiciona o depósito, para fechar o ciclo
-        # print(self.__solution)
         self.__time += float(self.__truckMatrix[lastInsert][0])
         self.__time = round(self.__time,2)
         return self.__time
